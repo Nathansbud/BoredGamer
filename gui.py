@@ -59,7 +59,7 @@ if __name__ == '__main__':
 
 
         game_options = bggcli.get_games(title)
-        if use_cache and title in cache and cache[title]['count'] > 3:
+        if use_cache and title in cache and cache[title]['count'] >= 3:
             selected = cache[title]
         else:
             if not game_options:

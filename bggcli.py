@@ -20,6 +20,16 @@ def get_games(name):
             return items
     return []
 
+def get_plays(days=30):
+    if not days: days = 0
+    date_offset = (datetime.datetime.now() - datetime.timedelta(days=days if days else 0)).strftime("%y-%m-%d")
+    response = requests.get(f"{bgg_api}/plays?username=Nathansbud&played=1{f'&mindate={date_offset}' if days > 0 else ''}")
+    if response:
+        data = json.loads(json.dumps(xmltodict.parse(response.content)))
+        plays = data["plays"]["play"] if 'play' in data['plays'] else []
+        return [{'date':p['@date'], 'plays':int(p["@quantity"]), "name":p['item']['@name']} for p in plays]
+    return []
+
 def log_play(gid, plays=1):
     with requests.Session() as session, open(os.path.join(os.path.dirname(__file__), "credentials", "bgg.json")) as jf:
         login = {"credentials": json.load(jf)}
@@ -38,4 +48,4 @@ def log_play(gid, plays=1):
         return not "invalid action" in response.text.lower()
 
 if __name__ == '__main__':
-    pass
+    get_plays()
