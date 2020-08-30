@@ -1,10 +1,11 @@
 #!/Users/zackamiton/Code/BGGCLI/venv/bin/python
-
 import urwid
-import bggcli
+import site
 import json
 import os
 from sys import argv
+import argparse
+
 
 cache_path = os.path.join(os.path.dirname(__file__), "cache.json")
 selected = None
@@ -34,31 +35,30 @@ def input_handler(key):
         selected = idx
         raise urwid.ExitMainLoop()
 
-
 if __name__ == '__main__':
     with open(cache_path) as cf: cache = json.load(cf)
+    parser = argparse.ArgumentParser(prog='bgg', allow_abbrev=True)
 
-    if len(argv) == 1 or argv[1] == '-help':
-        print("Usage:\taddplay name [plays] [-nocache]")
-        print("\tname: Name of board game")
-        print("\t[plays]: Number of plays to log (1 by default)")
-        print("\t[-nocache]: Ignore cache and force select menu to appear")
-        exit(0)
-    else:
+    mutex = parser.add_mutually_exclusive_group()
+    mutex.add_argument('-a', '--add', nargs='+', metavar=('title', 'plays'), help="Add game by title")
+    mutex.add_argument('-s', '--summary', action='store_true', help='get game summary')
+
+    parser.add_argument('-n', '--nocache', action='store_true', help='use cache')
+
+    args = vars(parser.parse_args())
+    add, summary = args.get('add'), args.get('summary')
+    if add:
         plays = 1
-        use_cache = True
-        title = argv[1].lower()
-        if len(argv) > 2:
-            if argv[-1] == "-nc": use_cache = False
+        if len(add) == 2:
             try:
-                plays = int(argv[2])
+                plays = int(add[1])
                 if plays < 1: raise ValueError
             except ValueError:
-                print("Play count must be positive integer!")
-                exit(-1)
+                parser.error("Play argument must be a positive number (preferably an integer)!")
 
-
-        game_options = bggcli.get_games(title)
+        use_cache = not args.get('nocache')
+        title = add[0].lower()
+        game_options = site.get_games(title)
         if use_cache and title in cache and cache[title]['count'] >= 3:
             selected = cache[title]
         else:
@@ -81,13 +81,14 @@ if __name__ == '__main__':
         if selected is not None:
             print(f"Adding {CYAN}{plays} {'plays' if plays > 1 else 'play'}{DEFAULT} to {YELLOW}{selected['name']} ({selected['year']}){DEFAULT}...")
             try:
-                if bggcli.log_play(selected['idx'], plays=plays):
+                if site.log_play(selected['idx'], plays=plays):
                     print(f"{GREEN}{'Plays added!' if plays > 1 else 'Play added!'}{DEFAULT}")
                 else:
                     print(f"{RED}Play adding failed!{DEFAULT}")
 
                 if not title in cache or cache[title]['idx'] != selected['idx']:
-                    cache[title] = {'count': 1, 'idx': selected['idx'], 'name':selected['name'], 'year':selected['year']}
+                    cache[title] = {'count': 1, 'idx': selected['idx'], 'name': selected['name'],
+                                    'year': selected['year']}
                 else:
                     cache[title]['count'] += 1
 
@@ -95,4 +96,8 @@ if __name__ == '__main__':
                     json.dump(cache, cf)
             except:
                 print(f"{RED}Play adding failed!{DEFAULT}")
+    elif summary:
+        print("SKRT")
+    else:
+        parser.print_help()
 

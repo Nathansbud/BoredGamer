@@ -1,4 +1,4 @@
-import bggcli
+import site
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from collections import Counter
@@ -6,7 +6,7 @@ from math import log
 
 def std(date_string): return datetime.strptime(date_string, "%Y-%m-%d")
 def play_plot(days=365):
-    plays = bggcli.get_plays(days)
+    plays = site.get_plays(days)
     by_game = {}
     for p in plays:
         if p['name'] in by_game: by_game[p['name']].extend([std(p['date'])]*p['plays'])
@@ -31,8 +31,6 @@ def play_plot(days=365):
 
     gcf = plt.gcf()
     gcf.autofmt_xdate()
-    # gcf.set_size_inches(10, 8)
-
     plt.show()
 
 if __name__ == '__main__':
