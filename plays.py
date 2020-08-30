@@ -1,4 +1,4 @@
-import site
+import link
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from collections import Counter
@@ -6,7 +6,7 @@ from math import log
 
 def std(date_string): return datetime.strptime(date_string, "%Y-%m-%d")
 def play_plot(days=365):
-    plays = site.get_plays(days)
+    plays = link.get_plays(days)
     by_game = {}
     for p in plays:
         if p['name'] in by_game: by_game[p['name']].extend([std(p['date'])]*p['plays'])

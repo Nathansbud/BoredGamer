@@ -1,15 +1,13 @@
 #!/Users/zackamiton/Code/BGGCLI/venv/bin/python
 import urwid
-import site
+import link
 import json
 import os
 from sys import argv
 import argparse
 
-
 cache_path = os.path.join(os.path.dirname(__file__), "cache.json")
 selected = None
-
 
 CYAN = "\033[36;1m"
 YELLOW = "\33[33;1m"
@@ -58,7 +56,7 @@ if __name__ == '__main__':
 
         use_cache = not args.get('nocache')
         title = add[0].lower()
-        game_options = site.get_games(title)
+        game_options = link.get_games(title)
         if use_cache and title in cache and cache[title]['count'] >= 3:
             selected = cache[title]
         else:
@@ -81,7 +79,7 @@ if __name__ == '__main__':
         if selected is not None:
             print(f"Adding {CYAN}{plays} {'plays' if plays > 1 else 'play'}{DEFAULT} to {YELLOW}{selected['name']} ({selected['year']}){DEFAULT}...")
             try:
-                if site.log_play(selected['idx'], plays=plays):
+                if link.log_play(selected['idx'], plays=plays):
                     print(f"{GREEN}{'Plays added!' if plays > 1 else 'Play added!'}{DEFAULT}")
                 else:
                     print(f"{RED}Play adding failed!{DEFAULT}")
@@ -97,7 +95,15 @@ if __name__ == '__main__':
             except:
                 print(f"{RED}Play adding failed!{DEFAULT}")
     elif summary:
-        print("SKRT")
+        play_data = link.get_plays(None)
+        game_data = {}
+        for play in play_data:
+            if play['name'] in game_data: game_data[play['name']] += play['plays']
+            else: game_data[play['name']] = play['plays']
+
+        for game, plays in sorted(game_data.items(), key=lambda gd: gd[0] if not gd[0].lower().startswith("the ") else gd[0][4:]):
+            print(f"- {YELLOW}{game}{DEFAULT}: {CYAN}{plays}{DEFAULT}")
+
     else:
         parser.print_help()
 
