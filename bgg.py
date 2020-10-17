@@ -38,14 +38,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='bgg', allow_abbrev=True)
 
     mutex = parser.add_mutually_exclusive_group()
-    mutex.add_argument('-a', '--add', nargs='+', metavar=('title', 'plays'), help="Add game by title")
-    mutex.add_argument('-s', '--summary', action='store_true', help='get game summary')
+    mutex.add_argument('-a', '--add', nargs='+', metavar=('title', '?plays'), help="Add game by title")
+    mutex.add_argument('-s', '--summary', nargs='?', metavar='?days', type=int, const=0, default=0, help='get game summary for last # of days (or full history if omitted)')
 
-    parser.add_argument('-n', '--nocache', action='store_true', help='use cache')
+    parser.add_argument('-n', '--nocache', action='store_true', help='ignore cache')
 
     args = vars(parser.parse_args())
     add, summary = args.get('add'), args.get('summary')
-    if add:
+    
+    if add is not None:
         plays = 1
         if len(add) == 2:
             try:
@@ -95,7 +96,7 @@ if __name__ == '__main__':
             except:
                 print(f"{RED}Play adding failed!{DEFAULT}")
     elif summary:
-        play_data = link.get_plays(None)
+        play_data = link.get_plays(None if summary < 1 else summary)
         game_data = {}
         for play in play_data:
             if play['name'] in game_data: game_data[play['name']] += play['plays']

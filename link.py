@@ -10,16 +10,13 @@ def get_games(name):
     response = requests.get(f'{bgg_api}/search?query={name.replace(" ", "%20")}&exact=1&type=boardgame')
     if response:
         response = xmltodict.parse(response.content)
-        total = int(response['items']['@total'])
+        total = int(response.get('items', {}).get('@total'))
+        
+        
         if total == 0: return []
-        elif total == 1:
-            item = response['items']['item']
-            return [{'name': item['name']['@value'], 'year': item['yearpublished']['@value'], 'idx':item['@id']}]
         else:
-            items = [{'name': item['name']['@value'], 'year': item['yearpublished']['@value'], 'idx':item['@id']} for item in response['items']['item']]
-            return items
-    return []
-
+            return [{'name': item.get('name', {}).get('@value'), 'year': item.get('yearpublished', {}).get('@value'), 'idx':item.get('@id')} for item in ([response['items']['item']] if total == 1 else response['items']['item'])]
+            
 def get_plays(days=30):
     if not days: days = 0
     date_offset = (datetime.datetime.now() - datetime.timedelta(days=days if days else 0)).strftime("%y-%m-%d")
@@ -29,7 +26,7 @@ def get_plays(days=30):
     while response := requests.get(f"{bgg_api}/plays?username=Nathansbud&played=1&page={(i := i+1)}{f'&mindate={date_offset}' if days > 0 else ''}"):
         data = xmltodict.parse(response.content)
         plays = data["plays"]["play"] if 'play' in data['plays'] else []
-        all_plays += [{'date':p['@date'], 'plays':int(p["@quantity"]), "name":p['item']['@name']} for p in plays]
+        all_plays += [{'date':p.get('@date'), 'plays':int(p.get("@quantity")), "name":p.get('item', {}).get('@name')} for p in plays]
     return all_plays
 
 def log_play(gid, plays=1):
