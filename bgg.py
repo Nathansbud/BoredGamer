@@ -5,6 +5,7 @@ import json
 import os
 from sys import argv
 import argparse
+import webbrowser
 
 cache_path = os.path.join(os.path.dirname(__file__), "cache.json")
 selected = None
@@ -38,10 +39,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='bgg', allow_abbrev=True)
 
     mutex = parser.add_mutually_exclusive_group()
-    mutex.add_argument('-a', '--add', nargs='+', metavar=('title', '?plays'), help="Add game by title")
-    mutex.add_argument('-s', '--summary', nargs='?', metavar='?days', type=int, const=0, default=0, help='get game summary for last # of days (or full history if omitted)')
+    mutex.add_argument('-a', '--add', nargs='+', metavar=('title', '?plays'), help="add plays by title")
+    mutex.add_argument('-s', '--summary', nargs='?', metavar='?days', type=int, const=0, default=-1, help='get game summary for last # of days (or full history if omitted)')
+    mutex.add_argument('-o', '--open', action='store_true', help='open boardgamegeek')
 
     parser.add_argument('-n', '--nocache', action='store_true', help='ignore cache')
+    parser.add_argument('-m', '--sortmode', default='title', const='title', nargs='?', choices=['title', 'plays'], help='mode to sort summary by')
 
     args = vars(parser.parse_args())
     add, summary = args.get('add'), args.get('summary')
@@ -95,16 +98,21 @@ if __name__ == '__main__':
                     json.dump(cache, cf)
             except:
                 print(f"{RED}Play adding failed!{DEFAULT}")
-    elif summary:
+    elif summary >= 0:
         play_data = link.get_plays(None if summary < 1 else summary)
         game_data = {}
         for play in play_data:
             if play['name'] in game_data: game_data[play['name']] += play['plays']
             else: game_data[play['name']] = play['plays']
 
-        for game, plays in sorted(game_data.items(), key=lambda gd: gd[0] if not gd[0].lower().startswith("the ") else gd[0][4:]):
-            print(f"- {YELLOW}{game}{DEFAULT}: {CYAN}{plays}{DEFAULT}")
 
+        if args.get('sortmode') == 'title': summary_set = sorted(game_data.items(), key=gd[0] if not gd[0].lower().startswith("the ") else gd[0][4:])
+        elif args.get('sortmode') == 'plays': summary_set = reversed(sorted(game_data.items(), key=lambda gd: gd[1]))
+
+        for game, plays in summary_set:
+            print(f"- {YELLOW}{game}{DEFAULT}: {CYAN}{plays}{DEFAULT}")
+    elif args.get('open'):
+        webbrowser.open('https://boardgamegeek.com/collection/user/Nathansbud')               
     else:
         parser.print_help()
 
