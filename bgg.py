@@ -106,7 +106,7 @@ if __name__ == '__main__':
             else: game_data[play['name']] = play['plays']
 
 
-        if args.get('sortmode') == 'title': summary_set = sorted(game_data.items(), key=gd[0] if not gd[0].lower().startswith("the ") else gd[0][4:])
+        if args.get('sortmode') == 'title': summary_set = sorted(game_data.items(), key=lambda gd: gd[0] if not gd[0].lower().startswith("the ") else gd[0][4:])
         elif args.get('sortmode') == 'plays': summary_set = reversed(sorted(game_data.items(), key=lambda gd: gd[1]))
 
         for game, plays in summary_set:

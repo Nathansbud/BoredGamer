@@ -7,11 +7,10 @@ import xmltodict
 bgg_api = "https://api.geekdo.com/xmlapi2"
 
 def get_games(name):
-    response = requests.get(f'{bgg_api}/search?query={name.replace(" ", "%20")}&exact=1&type=boardgame')
+    response = requests.get(f'{bgg_api}/search?query={name.replace(" ", "%20")}&exact=0&type=boardgame')
     if response:
         response = xmltodict.parse(response.content)
         total = int(response.get('items', {}).get('@total'))
-        
         
         if total == 0: return []
         else:
