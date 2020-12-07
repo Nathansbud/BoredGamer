@@ -3,11 +3,14 @@ import json
 import os
 import datetime
 import xmltodict
+import re
 
 bgg_api = "https://api.geekdo.com/xmlapi2"
 
 def get_games(name):
-    response = requests.get(f'{bgg_api}/search?query={name.replace(" ", "%20")}&exact=0&type=boardgame')
+    pattern = '[^a-zA-Z0-9\s]'
+    response = requests.get(f'{bgg_api}/search?query={re.sub(pattern, "", name).replace(" ", "%20")}&exact=0&type=boardgame')
+
     if response:
         response = xmltodict.parse(response.content)
         total = int(response.get('items', {}).get('@total'))
