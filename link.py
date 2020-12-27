@@ -25,10 +25,12 @@ def get_plays(days=30):
 
     i = 0
     all_plays = []
-    while response := requests.get(f"{bgg_api}/plays?username=Nathansbud&played=1&page={(i := i+1)}{f'&mindate={date_offset}' if days > 0 else ''}"):
+    while (response := requests.get(f"{bgg_api}/plays?username=Nathansbud&played=1&page={(i := i+1)}{f'&mindate={date_offset}' if days > 0 else ''}")):
         data = xmltodict.parse(response.content)
         plays = data["plays"]["play"] if 'play' in data['plays'] else []
-        all_plays += [{'date':p.get('@date'), 'plays':int(p.get("@quantity")), "name":p.get('item', {}).get('@name')} for p in plays]
+        
+        all_plays += [{'date':p.get('@date'), 'plays':int(p.get("@quantity")), "name":p.get('item', {}).get('@name')} for p in plays if not isinstance(p, str)]
+
     return all_plays
 
 def log_play(gid, plays=1):
