@@ -1,4 +1,3 @@
-#!/Users/zackamiton/Code/BGGCLI/venv/bin/python
 import urwid
 import link
 import json
