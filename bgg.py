@@ -17,6 +17,11 @@ RED = "\033[31;1m"
 
 DEFAULT = "\033[0m"
 
+class Reversor:
+    def __init__(self, value): self.value =value
+    def __eq__(self, oth): return oth.value == self.value
+    def __lt__(self, oth): return oth.value < self.value
+
 def input_handler(key):
     global selected
 
@@ -83,7 +88,7 @@ if __name__ == '__main__':
             
             parser.add_argument('-o', '--open', action='store_true', help='open boardgamegeek')
             parser.add_argument('-n', '--nocache', action='store_true', help='ignore cache')
-            parser.add_argument('-m', '--sortmode', default='title', const='title', nargs='?', choices=['title', 'plays'], help='mode to sort summary by')
+            parser.add_argument('-m', '--sortmode', default='plays', const='plays', nargs='?', choices=['title', 'plays'], help='mode to sort summary by')
             
             args = vars(parser.parse_args())
             add, summary = args.get('add'), args.get('summary')
@@ -154,13 +159,16 @@ if __name__ == '__main__':
                         if play['name'] in game_data: game_data[play['name']] += play['plays']
                         else: game_data[play['name']] = play['plays']
 
-                    if args.get('sortmode') == 'title': 
-                        summary_set = [gd for gd in sorted(game_data.items(), key=lambda gd: gd[0] if not gd[0].lower().startswith("the ") else gd[0][4:]) if filter_on.lower() in gd[0].lower()]
-                    elif args.get('sortmode') == 'plays': 
-                        summary_set = [gd for gd in reversed(sorted(game_data.items(), key=lambda gd: gd[1])) if filter_on.lower() in gd[0].lower()]
-                    
+                    game_sorter = lambda gd: gd
+                    if args.get('sortmode') == 'plays':
+                        game_sorter = lambda gd: (Reversor(gd[1]), gd[0] if not gd[0].lower().startswith("the ") else gd[0][4:])
+                    elif args.get('sortmode') == 'title': 
+                        game_sorter = lambda gd: (gd[0] if not gd[0].lower().startswith("the ") else gd[0][4:])
+
+                    summary_set = [gd for gd in sorted(game_data.items(), key=game_sorter) if filter_on.lower() in gd[0].lower()]
+                
                     if not summary_set: 
-                        print(f"{RED}No games found matching filter condition '{filter_on}!{DEFAULT}")
+                        print(f"{RED}No games found matching filter condition '{filter_on}'!{DEFAULT}")
                     else: 
                         for game, plays in summary_set:
                             print(f"- {YELLOW}{game}{DEFAULT}: {CYAN}{plays}{DEFAULT}")
