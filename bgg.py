@@ -5,6 +5,7 @@ import os
 from sys import argv, platform
 import argparse
 import webbrowser
+import shlex
 
 cache_path = os.path.join(os.path.dirname(__file__), "cache.json")
 selected = None
@@ -64,20 +65,29 @@ def choose_title():
 if __name__ == '__main__':
     try:
         if platform != 'ios':
-            with open(cache_path) as cf: cache = json.load(cf)
-            parser = argparse.ArgumentParser(prog='bgg', allow_abbrev=True)
+            try: 
+                with open(cache_path, 'r') as cf: 
+                    cache = json.load(cf)
+            except FileNotFoundError:
+                cache = {}
+
+            parser = argparse.ArgumentParser(
+                prog='bgg', 
+                description="Various utilities for BoardGameGeek logging",
+                allow_abbrev=True, 
+            )
 
             mutex = parser.add_mutually_exclusive_group()
             mutex.add_argument('-a', '--add', nargs='+', metavar=('title', '?plays'), help="add plays by title")
-            mutex.add_argument('-s', '--summary', nargs='?', metavar='?days', type=int, const=0, default=-1, help='get game summary for last # of days (or full history if omitted)')
-            mutex.add_argument('-o', '--open', action='store_true', help='open boardgamegeek')
-
+            mutex.add_argument('-s', '--summary', nargs='*', metavar=('?days', '?filter'), const=None, help='get game summary for last # of days (or full history if omitted)')
+            
+            parser.add_argument('-o', '--open', action='store_true', help='open boardgamegeek')
             parser.add_argument('-n', '--nocache', action='store_true', help='ignore cache')
             parser.add_argument('-m', '--sortmode', default='title', const='title', nargs='?', choices=['title', 'plays'], help='mode to sort summary by')
-
+            
             args = vars(parser.parse_args())
             add, summary = args.get('add'), args.get('summary')
-            
+        
             if add is not None:
                 plays = 1
                 if len(add) == 2:
@@ -127,20 +137,33 @@ if __name__ == '__main__':
                             json.dump(cache, cf)
                     except:
                         print(f"{RED}Play adding failed!{DEFAULT}")
-            elif summary >= 0:
-                play_data = link.get_plays(None if summary < 1 else summary)
+            elif summary is not None:
+                days = 0
+                filter_on = "".join(summary[1:]) if len(summary) > 1 else ""
+                if len(summary) > 0 and summary[0] != '.':
+                    try:
+                        days = int(summary[0])
+                    except ValueError:
+                        print("Summary must have a number or . as its first argument!")
+                        exit(1) 
+    
+                play_data = link.get_plays(None if days < 1 else days)
                 if play_data:
                     game_data = {}
                     for play in play_data:
                         if play['name'] in game_data: game_data[play['name']] += play['plays']
                         else: game_data[play['name']] = play['plays']
 
-
-                    if args.get('sortmode') == 'title': summary_set = sorted(game_data.items(), key=lambda gd: gd[0] if not gd[0].lower().startswith("the ") else gd[0][4:])
-                    elif args.get('sortmode') == 'plays': summary_set = reversed(sorted(game_data.items(), key=lambda gd: gd[1]))
-
-                    for game, plays in summary_set:
-                        print(f"- {YELLOW}{game}{DEFAULT}: {CYAN}{plays}{DEFAULT}")
+                    if args.get('sortmode') == 'title': 
+                        summary_set = [gd for gd in sorted(game_data.items(), key=lambda gd: gd[0] if not gd[0].lower().startswith("the ") else gd[0][4:]) if filter_on.lower() in gd[0].lower()]
+                    elif args.get('sortmode') == 'plays': 
+                        summary_set = [gd for gd in reversed(sorted(game_data.items(), key=lambda gd: gd[1])) if filter_on.lower() in gd[0].lower()]
+                    
+                    if not summary_set: 
+                        print(f"{RED}No games found matching filter condition '{filter_on}!{DEFAULT}")
+                    else: 
+                        for game, plays in summary_set:
+                            print(f"- {YELLOW}{game}{DEFAULT}: {CYAN}{plays}{DEFAULT}")
                 else:
                     print(f"{RED}No plays logged{' in that timespan' if summary < 1 else ''}!{DEFAULT}")
             elif args.get('open'):
