@@ -33,7 +33,7 @@ def get_plays(days=30):
 
     return all_plays
 
-def log_play(gid, plays=1):
+def log_play(gid, plays=1, comment=""):
     with requests.Session() as session, open(os.path.join(os.path.dirname(__file__), "credentials", "bgg.json")) as jf:
         login = {"credentials": json.load(jf)}
         headers = {'content-type': 'application/json'}
@@ -44,6 +44,7 @@ def log_play(gid, plays=1):
             "objecttype":"thing",
             "action":"save",
             "quantity": f"{plays}",
+            "comments": comment
         }
 
         response = session.post("https://boardgamegeek.com/geekplay.php", data=json.dumps(playload), headers=headers)
