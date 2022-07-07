@@ -1,12 +1,32 @@
-import requests
+import datetime
 import json
 import os
-import datetime
-import xmltodict
 import re
+
+import requests
+import xmltodict
+
+from utils import *
 
 bgg_api = "https://api.geekdo.com/xmlapi2"
 
+def get_user(): 
+    try: 
+        with open(creds_path) as jf: 
+            return json.load(jf)
+    except FileNotFoundError:
+        return login()  
+
+def login():
+    os.makedirs(os.path.join(os.path.dirname(__file__), "credentials"), exist_ok=True)
+    username = input(f"Enter your BoardGameGeek {CYAN}username{DEFAULT}: ")
+    password = input(f"Enter your BoardGameGeek {GREEN}password{DEFAULT}: ")
+    with open(creds_path, 'w') as cf:
+        creds = {"username": username, "password": password}
+        json.dump(creds, cf)
+        print(f"Saved login information for user {CYAN}{username}{DEFAULT}; if this is {RED}incorrect{DEFAULT}, run {YELLOW}bgg -l{DEFAULT} to login again!")
+        return creds     
+        
 def get_games(name):
     pattern = '[^a-zA-Z0-9\s]'
     response = requests.get(f'{bgg_api}/search?query={re.sub(pattern, "", name).replace(" ", "%20")}&exact=0&type=boardgame')
@@ -25,7 +45,12 @@ def get_plays(days=30):
 
     i = 0
     all_plays = []
-    while (response := requests.get(f"{bgg_api}/plays?username=Nathansbud&played=1&page={(i := i+1)}{f'&mindate={date_offset}' if days > 0 else ''}")):
+    user = get_user()
+    while (response := requests.get(f"{bgg_api}/plays?username={user.get('username')}&played=1&page={(i := i+1)}{f'&mindate={date_offset}' if days > 0 else ''}")):
+        if "invalid object or user" in response.text.lower():
+            print(f"{RED}Could not find any plays for user {user.get('username')}{DEFAULT}. Try logging in with {YELLOW}bgg -l{DEFAULT}!")
+            exit(1)
+
         data = xmltodict.parse(response.content)
         plays = data["plays"]["play"] if 'play' in data['plays'] else []
         
@@ -34,8 +59,8 @@ def get_plays(days=30):
     return all_plays
 
 def log_play(gid, plays=1, comment=""):
-    with requests.Session() as session, open(os.path.join(os.path.dirname(__file__), "credentials", "bgg.json")) as jf:
-        login = {"credentials": json.load(jf)}
+    with requests.Session() as session:
+        login = {"credentials": get_user()}
         headers = {'content-type': 'application/json'}
         cookies = session.post('https://boardgamegeek.com/login/api/v1', data=json.dumps(login), headers=headers)
         playload = {
@@ -48,8 +73,14 @@ def log_play(gid, plays=1, comment=""):
         }
 
         response = session.post("https://boardgamegeek.com/geekplay.php", data=json.dumps(playload), headers=headers)
-        #Still returns 200 on failure; check if "invalid action" appears in the returned html
-        return not "invalid action" in response.text.lower()
+        res_text = response.text.lower()
+
+        if "you must login to save plays" in res_text:
+            return 401
+        elif not "invalid action" in res_text: 
+            return 200
+        else:
+            return 400
 
 if __name__ == '__main__':
     get_plays()
