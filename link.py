@@ -3,6 +3,8 @@ import json
 import os
 import re
 
+from getpass import getpass
+
 import requests
 import xmltodict
 
@@ -20,7 +22,7 @@ def get_user():
 def login():
     os.makedirs(os.path.join(os.path.dirname(__file__), "credentials"), exist_ok=True)
     username = input(f"Enter your BoardGameGeek {CYAN}username{DEFAULT}: ")
-    password = input(f"Enter your BoardGameGeek {GREEN}password{DEFAULT}: ")
+    password = getpass(f"Enter your BoardGameGeek {GREEN}password{DEFAULT}: ")
     with open(creds_path, 'w') as cf:
         creds = {"username": username, "password": password}
         json.dump(creds, cf)
