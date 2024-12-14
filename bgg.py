@@ -1,21 +1,14 @@
-import link
-import json
-import os
-from sys import platform
 import argparse
+import json
 import webbrowser
+from sys import platform
 
 from simple_term_menu import TerminalMenu
 
-cache_path = os.path.join(os.path.dirname(__file__), "cache.json")
+import link
+from utils import *
+
 selected = None
-
-CYAN = "\033[36;1m"
-YELLOW = "\33[33;1m"
-GREEN = "\033[32;1m"
-RED = "\033[31;1m"
-
-DEFAULT = "\033[0m"
 
 class Reversor:
     def __init__(self, value): self.value =value
@@ -68,17 +61,29 @@ if __name__ == '__main__':
             mutex = parser.add_mutually_exclusive_group()
             mutex.add_argument('-a', '--add', nargs='+', metavar=('title', '?plays'), help="add plays by title")
             mutex.add_argument('-s', '--summary', nargs='*', metavar=('?days', '?filter'), const=None, help='get game summary for last # of days (or full history if omitted)')
-            
-            parser.add_argument('-o', '--open', action='store_true', help='open boardgamegeek')
+            mutex.add_argument('-l', '--login', action='store_true', help="login to a BoardGameGeek account")
+            mutex.add_argument('-o', '--open', action='store_true', help='open logged in BoardGameGeek account')
+            mutex.add_argument('-r', '--reset-cache', action='store_true', help="reset stored search cache information")
+
             parser.add_argument('-n', '--nocache', action='store_true', help='ignore cache')
             parser.add_argument('-m', '--sortmode', default='plays', const='plays', nargs='?', choices=['title', 'plays'], help='mode to sort summary by')
-            
             parser.add_argument('-c', '--comment', nargs='?', help='play comment')
 
             args = vars(parser.parse_args())
             add, summary = args.get('add'), args.get('summary')
-        
-            if add is not None:
+
+            no_args = True
+            if args.get('reset_cache'): 
+                no_args = False
+                try: 
+                    print("Clearing stored play cache!")
+                    os.remove(cache_path)
+                except OSError as e:
+                    pass
+
+            if args.get('login'):
+                link.login()
+            elif add is not None:
                 plays = 1
                 if len(add) == 2:
                     try:
@@ -103,10 +108,16 @@ if __name__ == '__main__':
                 if selected is not None:
                     print(f"Adding {CYAN}{plays} {'plays' if plays > 1 else 'play'}{DEFAULT} to {YELLOW}{selected['name']} ({selected['year']}){DEFAULT}...")
                     try:
-                        if link.log_play(selected['idx'], plays=plays, comment=args.get('comment')):
+                        res = link.log_play(selected['idx'], plays=plays, comment=args.get('comment'))
+                        if res == 200:
                             print(f"{GREEN}{'Plays added!' if plays > 1 else 'Play added!'}{DEFAULT}")
                         else:
-                            print(f"{RED}Play adding failed!{DEFAULT}")
+                            if res == 401:
+                                print(f"{RED}Incorrect credentials for currently logged in account{DEFAULT}. Try logging in with {YELLOW}bgg -l{DEFAULT}!")
+                            else:
+                                print(f"{RED}Play adding failed for unknown reasons!{DEFAULT}")
+                            
+                            exit(1)
 
                         if not title in cache or cache[title]['idx'] != selected['idx']:
                             cache[title] = {'count': 1, 'idx': selected['idx'], 'name': selected['name'],
@@ -116,9 +127,9 @@ if __name__ == '__main__':
 
                         with open(cache_path, 'w+') as cf:
                             json.dump(cache, cf)
-                    except:
+                    except Exception as e:
+                        print(e)
                         print(f"{RED}Play adding failed!{DEFAULT}")
-
             elif summary is not None:
                 days = 0
                 filter_on = "".join(summary[1:]) if len(summary) > 1 else ""
@@ -152,8 +163,9 @@ if __name__ == '__main__':
                 else:
                     print(f"{RED}No plays logged{' in that timespan' if summary < 1 else ''}!{DEFAULT}")
             elif args.get('open'):
-                webbrowser.open('https://boardgamegeek.com/collection/user/Nathansbud')               
-            else:
+                user = link.get_user()
+                webbrowser.open(f'https://boardgamegeek.com/collection/user/{user.get("username")}')               
+            elif no_args:
                 parser.print_help()
         else:
             choose_title()
