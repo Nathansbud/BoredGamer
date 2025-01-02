@@ -7,11 +7,12 @@ import time
 import requests
 import xmltodict
 
-from typing import Optional, Union
+from typing import Optional, Union, Dict
+from urllib.parse import quote
 from getpass import getpass
 
 from utils import *
-from model import Game
+from model import Game, CollectionItem
 
 
 # Docs: https://boardgamegeek.com/wiki/page/BGG_XML_API2
@@ -87,7 +88,11 @@ def get_collection(username: str):
     collection = xmltodict.parse(response.content)
     owned, wishlist = [], []
     for item in collection["items"]["item"]:
-        model = Game(name=item["name"]["#text"], id=item["@objectid"])
+        model = CollectionItem(
+            id=int(item["@collid"]),
+            comment=item.get("comment"),
+            game=Game(name=item["name"]["#text"], id=item["@objectid"])
+        )
 
         if item["status"]["@own"] == "1":
             owned.append(model)
@@ -145,6 +150,50 @@ def get_game(id: Union[int, str]):
         "player_recommended": recommended_counts,
         "complexity": round(float(content["statistics"]["ratings"]["averageweight"]["@value"]), 2)
     })
+
+@authenticated_request
+def update_comment(cid, gid, comment="", BGG_SESSION: Optional[requests.Session] = None):
+    request_body = {
+        "fieldname": "comment",
+        "collid": cid,
+        "objecttype": "thing",
+        "objectid": gid,
+        "value": comment,
+        "ajax": 1,
+        "action": "savedata",
+    }
+
+    response = BGG_SESSION.post(
+        "https://boardgamegeek.com/geekcollection.php",
+        data=request_body,
+        headers={'content-type': 'application/x-www-form-urlencoded'}
+    )
+
+def update_tags(coll_item: CollectionItem, tags: Dict[str, str]):
+    existing_tags = parse_tags(coll_item.comment)
+    for t, v in tags.items():
+        existing_tags[t] = v
+    
+    output = "".join([
+        f"[{tag}: {value}]" if value else f"[{tag}]" 
+        for tag, value in existing_tags.items()
+    ])
+
+    update_comment(coll_item.id, coll_item.game.id, comment=output)
+
+def parse_tags(s: Optional[str]):
+    if not s: return {}
+    
+    raw_tags = [tag.split(":") for tag in re.findall("\[(.*?)\]", s)]
+    
+    output_tags = {}
+    for t in raw_tags:
+        if len(t) == 1: 
+            output_tags[t[0]] = None
+        else:
+            output_tags[t[0]] = t[1].strip()
+    
+    return output_tags
 
 @authenticated_request
 def log_play(gid, plays=1, comment="", BGG_SESSION: Optional[requests.Session] = None):
