@@ -169,7 +169,7 @@ if __name__ == '__main__':
                 selected = True
                 while selected is not None:
                     sidx = TerminalMenu(
-                        (str(o) for o in owned), 
+                        (o.game.name for o in owned), 
                         menu_highlight_style=("bg_cyan", "fg_black"),
                         title=f"{user} – Collection"
                     ).show()
