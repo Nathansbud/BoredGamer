@@ -29,12 +29,12 @@ def authenticated_request(method):
 
     return authenticated_function
 
-def get_user(): 
+def get_user():
     try: 
         with open(creds_path) as jf: 
-            return json.load(jf)
+            return json.load(jf).get("username")
     except FileNotFoundError:
-        return login()  
+        return login().get("username")
 
 def login():
     os.makedirs(os.path.join(os.path.dirname(__file__), "credentials"), exist_ok=True)
@@ -168,32 +168,6 @@ def update_comment(cid, gid, comment="", BGG_SESSION: Optional[requests.Session]
         data=request_body,
         headers={'content-type': 'application/x-www-form-urlencoded'}
     )
-
-def update_tags(coll_item: CollectionItem, tags: Dict[str, str]):
-    existing_tags = parse_tags(coll_item.comment)
-    for t, v in tags.items():
-        existing_tags[t] = v
-    
-    output = "".join([
-        f"[{tag}: {value}]" if value else f"[{tag}]" 
-        for tag, value in existing_tags.items()
-    ])
-
-    update_comment(coll_item.id, coll_item.game.id, comment=output)
-
-def parse_tags(s: Optional[str]):
-    if not s: return {}
-    
-    raw_tags = [tag.split(":") for tag in re.findall("\[(.*?)\]", s)]
-    
-    output_tags = {}
-    for t in raw_tags:
-        if len(t) == 1: 
-            output_tags[t[0]] = None
-        else:
-            output_tags[t[0]] = t[1].strip()
-    
-    return output_tags
 
 @authenticated_request
 def log_play(gid, plays=1, comment="", BGG_SESSION: Optional[requests.Session] = None):
