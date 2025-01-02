@@ -49,7 +49,8 @@ if __name__ == '__main__':
         mutex.add_argument('-o', '--open', action='store_true', help='open logged in BoardGameGeek account')
         mutex.add_argument('-r', '--reset-cache', action='store_true', help="reset stored search cache information")
 
-        mutex.add_argument('--collection', const="<DEFAULT>", nargs="?", help="get user collection")
+        mutex.add_argument('--collection', action="store_true", help="interface with user collection")
+        mutex.add_argument('--lookup', nargs=1, help="lookup user collection")
 
         parser.add_argument('-n', '--nocache', action='store_true', help='ignore cache')
         parser.add_argument('-m', '--sortmode', default='plays', const='plays', nargs='?', choices=['title', 'plays'], help='mode to sort summary by')
@@ -59,8 +60,8 @@ if __name__ == '__main__':
 
         args = vars(parser.parse_args())
         
-        add, summary, collection = (
-            args.get(v) for v in ['add', 'summary', 'collection']
+        add, summary, lookup = (
+            args.get(v) for v in ['add', 'summary', 'lookup']
         )
 
         filters = [v for v in (args.get("filters") or [''])[0].split(",") if v]
@@ -154,8 +155,8 @@ if __name__ == '__main__':
                         print(f"- {YELLOW}{game}{DEFAULT}: {CYAN}{plays}{DEFAULT}")
             else:
                 print(f"{RED}No plays logged{' in that timespan' if summary < 1 else ''}!{DEFAULT}")
-        elif collection is not None:
-            user = link.get_user() if collection == "<DEFAULT>" else collection
+        elif args.get("collection"):
+            user = link.get_user()
             _owned, _wishlist = link.get_collection(user)
             owned = [
                 o for o in _owned if len(filters) == 0 or
@@ -233,7 +234,16 @@ if __name__ == '__main__':
                             )
                         elif subselected is not None:
                             print(f"No action has been implemented for: {subselected}")
-                
+        elif lookup is not None:
+            _owned, _wishlist = link.get_collection(lookup[0])
+            owned = [
+                o for o in _owned if len(filters) == 0 or
+                (o.comment and all(f in o.comment for f in filters))
+            ]
+
+            for o in owned:
+                print(f"- {o.game.name}")
+
         elif args.get('open'):
             user = link.get_user()
             webbrowser.open(f'https://boardgamegeek.com/collection/user/{user}')               
