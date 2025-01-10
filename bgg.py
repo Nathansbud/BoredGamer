@@ -182,78 +182,13 @@ if __name__ == '__main__':
                 print(f"{RED}No plays logged{' in that timespan' if summary < 1 else ''}!{DEFAULT}")
         elif args.get("collection"):
             user = link.get_user()
-            _owned, _wishlist = link.get_collection(user)
+            _owned, _ = link.get_collection(user)
             owned = [
                 o for o in _owned if len(filters) == 0 or
                 (o.comment and all(f in o.comment for f in filters))
             ]
             
-            wishlist = sorted(_wishlist, key=lambda item: item.wishlist.priority)
-            if s_wishlist:
-                selected = True
-                while selected is not None:
-                    sidx = TerminalMenu(
-                        (f"{w.wishlist.priority} - {w.game.name}" for w in wishlist),
-                        menu_highlight_style=("bg_cyan", "fg_black"),
-                        title=f"{user} – Wishlist"
-                    ).show()
-
-                    selected = wishlist[sidx] if isinstance(sidx, int) else None
-                    if selected is not None:
-                        subselected = True
-                        while subselected is True:
-                            ssidx = TerminalMenu(
-                                V_WishlistUpdate,
-                                menu_highlight_style=("bg_cyan", "fg_black"),
-                                title=f"{selected.game.name} {f'- {selected.wishlist.comment}' if selected.wishlist.comment else ''}"
-                            ).show()
-                            
-                            subselected = L_WishlistUpdate[ssidx] if isinstance(ssidx, int) else None
-                            if subselected is WishlistUpdate.CHANGE_PRIORITY:
-                                priority = TerminalMenu(
-                                    ["1 (Need)", "2 (Want)", "3 (Could)", "4 (Exists)", "5 (Don't)"],
-                                    menu_highlight_style=("bg_cyan", "fg_black"),
-                                    title=f"Update Priority - Currently: {selected.wishlist.priority}"
-                                ).show()
-                                
-                                if priority is not None and (priority + 1 != selected.wishlist.priority):
-                                    selected.wishlist.priority = priority + 1
-                                    link.update_status(
-                                        selected.id,
-                                        selected.game.id,
-                                        owned=False,
-                                        wishlist_status=priority + 1
-                                    )
-
-                                    # re-sort after updating, first on name then on priority
-                                    wishlist = sorted(
-                                        sorted(wishlist, key=lambda n: n.game.name),
-                                        key=lambda w: w.wishlist.priority
-                                    )
-                                
-                                subselected = True
-                            elif subselected is WishlistUpdate.MARK_OWNED:
-                                link.update_status(
-                                    selected.id,
-                                    selected.game.id,
-                                    owned=True
-                                )
-                                
-                                owned.append(selected)
-                                owned = sorted(owned, key=lambda o: o.game.name)
-                            elif subselected is WishlistUpdate.UPDATE_COMMENT:
-                                new_comment = input("Wishlist Comment: ").strip()
-                                selected.wishlist.comment = new_comment
-                                link.update_comment(selected.id, selected.game.id, new_comment)
-                                subselected = True
-                            elif subselected is WishlistUpdate.DELETE_ITEM:
-                                link.delete_item(selected.id)
-                                wishlist.remove(selected)
-                            elif subselected is WishlistUpdate.OPEN_PAGE:
-                                webbrowser.open(f"https://boardgamegeek.com/boardgame/{selected.game.id}")
-                                subselected = True
-                            
-            elif not owned: 
+            if not owned: 
                 print(f"No items in the collection satisfies all applied filters: {filters}")
             else:
                 selected = True
@@ -326,8 +261,76 @@ if __name__ == '__main__':
                             webbrowser.open(f"https://boardgamegeek.com/boardgame/{selected.game.id}")           
                         elif subselected is not None:
                             print(f"No action has been implemented for: {subselected}")
+        elif args.get("wishlist"):
+            user = link.get_user()
+            _, _wishlist = link.get_collection(user)
+            wishlist = sorted(_wishlist, key=lambda item: item.wishlist.priority)
+                            
+            selected = True
+            while selected is not None:
+                sidx = TerminalMenu(
+                    (f"{w.wishlist.priority} - {w.game.name}" for w in wishlist),
+                    menu_highlight_style=("bg_cyan", "fg_black"),
+                    title=f"{user} – Wishlist"
+                ).show()
+
+                selected = wishlist[sidx] if isinstance(sidx, int) else None
+                if selected is not None:
+                    subselected = True
+                    while subselected is True:
+                        ssidx = TerminalMenu(
+                            V_WishlistUpdate,
+                            menu_highlight_style=("bg_cyan", "fg_black"),
+                            title=f"{selected.game.name} {f'- {selected.wishlist.comment}' if selected.wishlist.comment else ''}"
+                        ).show()
+                        
+                        subselected = L_WishlistUpdate[ssidx] if isinstance(ssidx, int) else None
+                        if subselected is WishlistUpdate.CHANGE_PRIORITY:
+                            priority = TerminalMenu(
+                                ["1 (Need)", "2 (Want)", "3 (Could)", "4 (Exists)", "5 (Don't)"],
+                                menu_highlight_style=("bg_cyan", "fg_black"),
+                                title=f"Update Priority - Currently: {selected.wishlist.priority}"
+                            ).show()
+                            
+                            if priority is not None and (priority + 1 != selected.wishlist.priority):
+                                selected.wishlist.priority = priority + 1
+                                link.update_status(
+                                    selected.id,
+                                    selected.game.id,
+                                    owned=False,
+                                    wishlist_status=priority + 1
+                                )
+
+                                # re-sort after updating, first on name then on priority
+                                wishlist = sorted(
+                                    sorted(wishlist, key=lambda n: n.game.name),
+                                    key=lambda w: w.wishlist.priority
+                                )
+                            
+                            subselected = True
+                        elif subselected is WishlistUpdate.MARK_OWNED:
+                            link.update_status(
+                                selected.id,
+                                selected.game.id,
+                                owned=True
+                            )
+                            
+                            owned.append(selected)
+                            owned = sorted(owned, key=lambda o: o.game.name)
+                        elif subselected is WishlistUpdate.UPDATE_COMMENT:
+                            new_comment = input("Wishlist Comment: ").strip()
+                            selected.wishlist.comment = new_comment
+                            link.update_comment(selected.id, selected.game.id, new_comment)
+                            subselected = True
+                        elif subselected is WishlistUpdate.DELETE_ITEM:
+                            link.delete_item(selected.id)
+                            wishlist.remove(selected)
+                        elif subselected is WishlistUpdate.OPEN_PAGE:
+                            webbrowser.open(f"https://boardgamegeek.com/boardgame/{selected.game.id}")
+                            subselected = True
+    
         elif lookup is not None:
-            _owned, _wishlist = link.get_collection(lookup[0])
+            _owned, _ = link.get_collection(lookup[0])
             owned = [
                 o for o in _owned if len(filters) == 0 or
                 (o.comment and all(f in o.comment for f in filters))
