@@ -85,8 +85,11 @@ def get_collection(username: str):
         time.sleep(timeout)
         timeout *= 2
     
-    collection = xmltodict.parse(response.content)
     owned, wishlist = [], []
+    collection = xmltodict.parse(response.content)
+    if "items" not in collection:
+        return owned, wishlist
+
     for item in collection["items"]["item"]:
         model = CollectionItem(
             id=int(item["@collid"]),
