@@ -193,7 +193,7 @@ def update_status(
     gid: int,
     owned: bool,
     prev_owned: bool = False,
-    wishlist_status: Optional[int] = None, 
+    wishlist_priority: Optional[int] = None, 
     BGG_SESSION: Optional[requests.Session] = None
 ):
     request_body = {
@@ -203,8 +203,8 @@ def update_status(
         "objectid": gid,
         "own": 1 if owned else 0,
         "prev_owned": 1 if prev_owned else 0,
-        "wishlist": 1 if wishlist_status is not None else 0,
-        "wishlistpriority": wishlist_status if wishlist_status is not None else 1,
+        "wishlist": 1 if wishlist_priority is not None else 0,
+        "wishlistpriority": wishlist_priority if wishlist_priority is not None else 1,
         "ajax": 1,
         "action": "savedata",
     }

@@ -117,23 +117,45 @@ if __name__ == '__main__':
             if selected is not None:
                 if s_wishlist:
                     plays = 4 if default else min(plays, max(plays, 1), 5)
-                    link.wishlist_game(
-                        selected['idx'], 
-                        selected['name'], 
-                        priority=plays,
-                        comment=args.get('comment')
-                    )
+                    
+                    user = link.get_user()
+                    print(f"Checking {magenta(user)} collection to avoid duplicates...")
+
+                    _collection, _wishlist = link.get_collection("Nathansbud")
+                    filter_cond = lambda item: selected['idx'] == item.game.id
+                    r_collection, r_wishlist = list(filter(filter_cond, _collection)), list(filter(filter_cond, _wishlist))
+                    
+                    if r_wishlist:
+                        relevant = r_wishlist[0]
+                        print(f"Found {colr(relevant.game.name, Role.GAME)} on wishlist @ {bold(relevant.wishlist.priority)}, with comment: '{bold(relevant.wishlist.comment)}'.\n")
+                        if "y" == input(f"Update metadata ({bold('y/n')})? "):
+                            # This should probably use the /collectionitems/{cid} endpoint, but that requires
+                            # much more work than just hitting update_status, update_comment
+                            link.update_comment(relevant.id, relevant.game.id, args.get("comment", ""), True)
+                            
+                            if relevant.wishlist.priority != plays:
+                                link.update_status(relevant.id, relevant.game.id, False, wishlist_priority=plays)
+                    elif r_collection:
+                        print("Item already exists in collection; ignoring...")
+                        exit(0)
+                    else:
+                        link.wishlist_game(
+                            selected['idx'], 
+                            selected['name'], 
+                            priority=plays,
+                            comment=args.get('comment')
+                        )
                 else:
-                    print(f"Adding {CYAN}{plays} {'plays' if plays > 1 else 'play'}{DEFAULT} to {YELLOW}{selected['name']} ({selected['year']}){DEFAULT}...")
+                    print(f"Adding {colr(plays, Role.PLAY)} {'plays' if plays > 1 else 'play'} to {colr(selected['name'], Role.GAME)} ({selected['year']})...")
                     try:
                         res = link.log_play(selected['idx'], plays=plays, comment=args.get('comment'))
                         if res == 200:
-                            print(f"{GREEN}{'Plays added!' if plays > 1 else 'Play added!'}{DEFAULT}")
+                            print(f"{colr('Plays added', Role.SUCCESS)}!" if plays > 1 else 'Play added!')
                         else:
                             if res == 401:
-                                print(f"{RED}Incorrect credentials for currently logged in account{DEFAULT}. Try logging in with {YELLOW}bgg -l{DEFAULT}!")
+                                print(f"{colr('Incorrect credentials', Role.ERROR)} for currently logged in account'. Try logging in with {yellow('bgg -l')}!")
                             else:
-                                print(f"{RED}Play adding failed for unknown reasons!{DEFAULT}")
+                                print(f"{colr('Play add failed', Role.ERROR)} for unknown reasons!")
                             
                             exit(1)
 
@@ -146,7 +168,7 @@ if __name__ == '__main__':
                             json.dump(cache, cf)
                     except Exception as e:
                         print(e)
-                        print(f"{RED}Play adding failed!{DEFAULT}")
+                        print(f"{colr('Play adding failed', Role.ERROR)}!")
         
         elif summary is not None:
             days = 0
@@ -174,12 +196,12 @@ if __name__ == '__main__':
                 summary_set = [gd for gd in sorted(game_data.items(), key=game_sorter) if filter_on.lower() in gd[0].lower()]
             
                 if not summary_set: 
-                    print(f"{RED}No games found matching filter condition '{filter_on}'!{DEFAULT}")
+                    print(f"{colr('No games found', Role.ERROR)} matching filter condition: '{yellow(filter_on)}'!")
                 else: 
                     for game, plays in summary_set:
-                        print(f"- {YELLOW}{game}{DEFAULT}: {CYAN}{plays}{DEFAULT}")
+                        print(f"- {colr(game, Role.GAME)}: {colr(plays, Role.PLAY)}")
             else:
-                print(f"{RED}No plays logged{' in that timespan' if summary < 1 else ''}!{DEFAULT}")
+                print(f"{colr('No plays logged', Role.ERROR)}{' in that timespan' if summary < 1 else ''}!")
         elif args.get("collection"):
             user = link.get_user()
             _owned, _ = link.get_collection(user)
@@ -298,7 +320,7 @@ if __name__ == '__main__':
                                     selected.id,
                                     selected.game.id,
                                     owned=False,
-                                    wishlist_status=priority + 1
+                                    wishlist_priority=priority + 1
                                 )
 
                                 # re-sort after updating, first on name then on priority
