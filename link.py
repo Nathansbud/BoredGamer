@@ -12,7 +12,7 @@ from urllib.parse import quote
 from getpass import getpass
 
 from utils import *
-from model import Game, CollectionItem
+from model import Game, CollectionItem, WishlistMetadata
 
 
 # Docs: https://boardgamegeek.com/wiki/page/BGG_XML_API2
@@ -94,9 +94,18 @@ def get_collection(username: str):
             game=Game(name=item["name"]["#text"], id=item["@objectid"])
         )
 
+        # These are technically not mutually exclusive categories for BGG, but treating as if they are. This will
+        # break things in the exceedingly rare case where a game is both owned AND wishlisted...oh well
         if item["status"]["@own"] == "1":
+            model.owned = True
             owned.append(model)
-        elif item["status"]["@wishlist"] == 1:
+        elif item["status"]["@wishlist"] == "1":
+            model.owned = False
+            model.wishlist = WishlistMetadata(
+                priority=int(item["status"].get("@wishlistpriority", 0)),
+                comment=item.get("wishlistcomment")
+            )
+            
             wishlist.append(model)
     
     return owned, wishlist
@@ -152,7 +161,7 @@ def get_game(id: Union[int, str]):
     })
 
 @authenticated_request
-def wishlist_game(gid: int, name: str, priority: int, BGG_SESSION: Optional[requests.Session] = None):
+def wishlist_game(gid: int, name: str, priority: int, comment: Optional[str] = None, BGG_SESSION: Optional[requests.Session] = None):
     request_body = {"item": {
         "collid": 0,
         "pp_currency": "USD",
@@ -166,6 +175,9 @@ def wishlist_game(gid: int, name: str, priority: int, BGG_SESSION: Optional[requ
         "invdate": None
     }}
 
+    if comment:
+        request_body["item"]["textfield"] = {"wishlistcomment": {"value": comment}}
+
     BGG_SESSION.post(
         "https://boardgamegeek.com/api/collectionitems",
         data=json.dumps(request_body),
@@ -177,6 +189,7 @@ def update_status(
     cid: int, 
     gid: int,
     owned: bool,
+    prev_owned: bool = False,
     wishlist_status: Optional[int] = None, 
     BGG_SESSION: Optional[requests.Session] = None
 ):
@@ -186,6 +199,7 @@ def update_status(
         "objecttype": "thing",
         "objectid": gid,
         "own": 1 if owned else 0,
+        "prev_owned": 1 if prev_owned else 0,
         "wishlist": 1 if wishlist_status is not None else 0,
         "wishlistpriority": wishlist_status if wishlist_status is not None else 1,
         "ajax": 1,
@@ -198,11 +212,30 @@ def update_status(
         headers={'content-type': 'application/x-www-form-urlencoded'}
     )
 
+@authenticated_request
+def delete_item(cid: int, BGG_SESSION: Optional[requests.Session] = None):
+    request_body = {
+        "collid": cid,
+        "ajax": 1,
+        "action": "delete",
+    }
+
+    BGG_SESSION.post(
+        "https://boardgamegeek.com/geekcollection.php",
+        data=request_body,
+        headers={'content-type': 'application/x-www-form-urlencoded'}
+    )
 
 @authenticated_request
-def update_comment(cid, gid, comment="", BGG_SESSION: Optional[requests.Session] = None):    
+def update_comment(
+    cid: int, 
+    gid: int, 
+    comment: str="", 
+    wishlist: bool=False, 
+    BGG_SESSION: Optional[requests.Session] = None
+):    
     request_body = {
-        "fieldname": "comment",
+        "fieldname": "comment" if not wishlist else "wishlistcomment",
         "collid": cid,
         "objecttype": "thing",
         "objectid": gid,

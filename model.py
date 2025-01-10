@@ -27,16 +27,28 @@ class Game:
     def __repr__(self): 
         return self.__str__()
 
+class WishlistMetadata:
+    priority: int
+    comment: Optional[str]
+
+    def __init__(self, **kwargs):
+        for field in ["priority", "comment"]:
+            self.__dict__[field] = kwargs.get(field)
+
 class CollectionItem:
     game: Game
     id: int
+    owned: bool
     comment: Optional[str]
+    wishlist: Optional[WishlistMetadata]
 
     def __init__(self, **kwargs):
         for field in [
             "id",
             "game",
-            "comment"
+            "comment",
+            "owned",
+            "wishlist"
         ]:
             self.__dict__[field] = kwargs.get(field)
     
