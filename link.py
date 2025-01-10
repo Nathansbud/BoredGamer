@@ -152,7 +152,55 @@ def get_game(id: Union[int, str]):
     })
 
 @authenticated_request
-def update_comment(cid, gid, comment="", BGG_SESSION: Optional[requests.Session] = None):
+def wishlist_game(gid: int, name: str, priority: int, BGG_SESSION: Optional[requests.Session] = None):
+    request_body = {"item": {
+        "collid": 0,
+        "pp_currency": "USD",
+        "cv_currency": "USD",
+        "objecttype": "thing",
+        "objectid": f"{gid}",
+        "objectname": name,
+        "status": { "wishlist": True },
+        "wishlistpriority": priority,
+        "acquisitiondate": None,
+        "invdate": None
+    }}
+
+    BGG_SESSION.post(
+        "https://boardgamegeek.com/api/collectionitems",
+        data=json.dumps(request_body),
+        headers={'content-type': 'application/json'}
+    )
+
+@authenticated_request
+def update_status(
+    cid: int, 
+    gid: int,
+    owned: bool,
+    wishlist_status: Optional[int] = None, 
+    BGG_SESSION: Optional[requests.Session] = None
+):
+    request_body = {
+        "fieldname": "status",
+        "collid": cid,
+        "objecttype": "thing",
+        "objectid": gid,
+        "own": 1 if owned else 0,
+        "wishlist": 1 if wishlist_status is not None else 0,
+        "wishlistpriority": wishlist_status if wishlist_status is not None else 1,
+        "ajax": 1,
+        "action": "savedata",
+    }
+
+    BGG_SESSION.post(
+        "https://boardgamegeek.com/geekcollection.php",
+        data=request_body,
+        headers={'content-type': 'application/x-www-form-urlencoded'}
+    )
+
+
+@authenticated_request
+def update_comment(cid, gid, comment="", BGG_SESSION: Optional[requests.Session] = None):    
     request_body = {
         "fieldname": "comment",
         "collid": cid,
@@ -163,7 +211,7 @@ def update_comment(cid, gid, comment="", BGG_SESSION: Optional[requests.Session]
         "action": "savedata",
     }
 
-    response = BGG_SESSION.post(
+    BGG_SESSION.post(
         "https://boardgamegeek.com/geekcollection.php",
         data=request_body,
         headers={'content-type': 'application/x-www-form-urlencoded'}

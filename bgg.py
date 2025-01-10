@@ -55,13 +55,13 @@ if __name__ == '__main__':
         parser.add_argument('-n', '--nocache', action='store_true', help='ignore cache')
         parser.add_argument('-m', '--sortmode', default='plays', const='plays', nargs='?', choices=['title', 'plays'], help='mode to sort summary by')
         parser.add_argument('-c', '--comment', nargs='?', help='play comment')
-
+        parser.add_argument('-w', '--wishlist', action='store_true', help='add to wishlist')
         parser.add_argument('--filters', nargs=1, help="filters for collection")
 
         args = vars(parser.parse_args())
         
-        add, summary, lookup = (
-            args.get(v) for v in ['add', 'summary', 'lookup']
+        add, summary, lookup, s_wishlist = (
+            args.get(v) for v in ['add', 'summary', 'lookup', 'wishlist']
         )
 
         filters = [v for v in (args.get("filters") or [''])[0].split(",") if v]
@@ -78,14 +78,17 @@ if __name__ == '__main__':
         if args.get('login'):
             link.login()
         elif add is not None:
+            default = True
             plays = 1
             if len(add) == 2:
                 try:
                     plays = int(add[1])
                     if plays < 1: raise ValueError
                 except ValueError:
-                    parser.error("Play argument must be a positive number (preferably an integer)!")
-
+                    parser.error("Add argument must be a positive number (preferably an integer)!")
+                finally: 
+                    default = False
+            
             use_cache = not args.get('nocache')
             title = add[0].lower()
             game_options = link.get_games(title)
@@ -98,8 +101,11 @@ if __name__ == '__main__':
                     game_items = [f'{game["name"]} ({game["year"]}) - ID: {game["idx"]}' for game in game_options]
                     sidx = TerminalMenu(game_items, menu_highlight_style=("bg_cyan", "fg_black")).show()
                     selected = game_options[sidx] if isinstance(sidx, int) else None
-                    
-            if selected is not None:
+
+            if s_wishlist:
+                plays = 4 if default else min(plays, max(plays, 1), 5)
+                link.wishlist_game(selected['idx'], selected['name'], priority=plays)
+            elif selected is not None:
                 print(f"Adding {CYAN}{plays} {'plays' if plays > 1 else 'play'}{DEFAULT} to {YELLOW}{selected['name']} ({selected['year']}){DEFAULT}...")
                 try:
                     res = link.log_play(selected['idx'], plays=plays, comment=args.get('comment'))
@@ -123,6 +129,7 @@ if __name__ == '__main__':
                 except Exception as e:
                     print(e)
                     print(f"{RED}Play adding failed!{DEFAULT}")
+        
         elif summary is not None:
             days = 0
             filter_on = "".join(summary[1:]) if len(summary) > 1 else ""
