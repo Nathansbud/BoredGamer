@@ -127,11 +127,15 @@ if __name__ == '__main__':
                     
                     if r_wishlist:
                         relevant = r_wishlist[0]
-                        print(f"Found {colr(relevant.game.name, Role.GAME)} on wishlist @ {bold(relevant.wishlist.priority)}, with comment: '{bold(relevant.wishlist.comment)}'.\n")
+                        print(f"Found {colr(relevant.game.name, Role.GAME)} on wishlist @ {bold(relevant.wishlist.priority)}, with comment: '{bold(relevant.wishlist.comment or '')}'.\n")
                         if "y" == input(f"Update metadata ({bold('y/n')})? "):
                             # This should probably use the /collectionitems/{cid} endpoint, but that requires
                             # much more work than just hitting update_status, update_comment
-                            link.update_comment(relevant.id, relevant.game.id, args.get("comment", ""), True)
+                            
+                            # only update comment if one exists; usually, this is a matter of updating wishlist 
+                            # position, so updating comment with "" is not desired behavior...the old comment
+                            if args.get("comment") is not None:    
+                                link.update_comment(relevant.id, relevant.game.id, args.get("comment"), True)
                             
                             if relevant.wishlist.priority != plays:
                                 link.update_status(relevant.id, relevant.game.id, False, wishlist_priority=plays)
@@ -202,7 +206,7 @@ if __name__ == '__main__':
                         print(f"- {colr(game, Role.GAME)}: {colr(plays, Role.PLAY)}")
             else:
                 print(f"{colr('No plays logged', Role.ERROR)}{' in that timespan' if summary < 1 else ''}!")
-        elif args.get("collection"):
+        elif args.get("collection") and not args.get("open"):
             user = link.get_user()
             _owned, _ = link.get_collection(user)
             owned = [
@@ -283,7 +287,7 @@ if __name__ == '__main__':
                             webbrowser.open(f"https://boardgamegeek.com/boardgame/{selected.game.id}")           
                         elif subselected is not None:
                             print(f"No action has been implemented for: {subselected}")
-        elif args.get("wishlist"):
+        elif args.get("wishlist") and not args.get("open"):
             user = link.get_user()
             _, _wishlist = link.get_collection(user)
             wishlist = sorted(_wishlist, key=lambda item: item.wishlist.priority)
@@ -363,7 +367,10 @@ if __name__ == '__main__':
 
         elif args.get('open'):
             user = link.get_user()
-            webbrowser.open(f'https://boardgamegeek.com/collection/user/{user}')               
+            if args.get("wishlist"):
+                webbrowser.open(f'https://boardgamegeek.com/wishlist/{user}')               
+            else:
+                webbrowser.open(f'https://boardgamegeek.com/collection/user/{user}')               
         elif no_args:
             parser.print_help()
     except KeyboardInterrupt:
