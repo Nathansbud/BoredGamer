@@ -2,6 +2,7 @@ import argparse
 import json
 import webbrowser
 import readline
+import textwrap
 
 from enum import Enum
 
@@ -135,7 +136,7 @@ if __name__ == '__main__':
                             # only update comment if one exists; usually, this is a matter of updating wishlist 
                             # position, so updating comment with "" is not desired behavior...the old comment
                             if args.get("comment") is not None:    
-                                link.update_comment(relevant.id, relevant.game.id, args.get("comment"), True)
+                                link.update_comment(relevant.id, relevant.game.id, args.get("comment"), wishlist=True)
                             
                             if relevant.wishlist.priority != plays:
                                 link.update_status(relevant.id, relevant.game.id, False, wishlist_priority=plays)
@@ -302,12 +303,21 @@ if __name__ == '__main__':
 
                 selected = wishlist[sidx] if isinstance(sidx, int) else None
                 if selected is not None:
+                    metadata = link.get_game(selected.game.id)
+                    metadata_str = "[Plays: {}–{}][Best: {}][Rec: {}][Cx: {}]".format(
+                        metadata.player_minimum,
+                        metadata.player_maximum,
+                        ", ".join(map(str, metadata.player_best)),
+                        ", ".join(map(str, metadata.player_recommended)),
+                        metadata.complexity
+                    )
+
                     subselected = True
                     while subselected is True:
                         ssidx = TerminalMenu(
                             V_WishlistUpdate,
                             menu_highlight_style=("bg_cyan", "fg_black"),
-                            title=f"{selected.game.name} {f'- {selected.wishlist.comment}' if selected.wishlist.comment else ''}"
+                            title=[s for s in [f"{selected.game.name} - {metadata_str}", (selected.wishlist.comment or "")] if s],
                         ).show()
                         
                         subselected = L_WishlistUpdate[ssidx] if isinstance(ssidx, int) else None
@@ -332,8 +342,7 @@ if __name__ == '__main__':
                                     sorted(wishlist, key=lambda n: n.game.name),
                                     key=lambda w: w.wishlist.priority
                                 )
-                            
-                            subselected = True
+                                
                         elif subselected is WishlistUpdate.MARK_OWNED:
                             link.update_status(
                                 selected.id,
@@ -346,14 +355,12 @@ if __name__ == '__main__':
                         elif subselected is WishlistUpdate.UPDATE_COMMENT:
                             new_comment = input("Wishlist Comment: ").strip()
                             selected.wishlist.comment = new_comment
-                            link.update_comment(selected.id, selected.game.id, new_comment)
-                            subselected = True
+                            link.update_comment(selected.id, selected.game.id, new_comment, wishlist=True)
                         elif subselected is WishlistUpdate.DELETE_ITEM:
                             link.delete_item(selected.id)
                             wishlist.remove(selected)
                         elif subselected is WishlistUpdate.OPEN_PAGE:
                             webbrowser.open(f"https://boardgamegeek.com/boardgame/{selected.game.id}")
-                            subselected = True
     
         elif lookup is not None:
             _owned, _ = link.get_collection(lookup[0])
