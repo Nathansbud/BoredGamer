@@ -228,10 +228,11 @@ if __name__ == '__main__':
 
                     selected = owned[sidx] if isinstance(sidx, int) else None
                     if selected is not None:
+                        metadata = link.get_game(selected.game.id)
                         ssidx = TerminalMenu(
                             V_CollectionUpdate, 
                             menu_highlight_style=("bg_cyan", "fg_black"),
-                            title=f"{selected.game.name} {selected.comment or ''}"
+                            title=[s for s in [f"{selected.game.name} - {metadata.format_metadata()}", (selected.comment or "")] if s],
                         ).show()
                         
                         subselected = L_CollectionUpdate[ssidx] if isinstance(ssidx, int) else None
@@ -304,20 +305,13 @@ if __name__ == '__main__':
                 selected = wishlist[sidx] if isinstance(sidx, int) else None
                 if selected is not None:
                     metadata = link.get_game(selected.game.id)
-                    metadata_str = "[Plays: {}–{}][Best: {}][Rec: {}][Cx: {}]".format(
-                        metadata.player_minimum,
-                        metadata.player_maximum,
-                        ", ".join(map(str, metadata.player_best)),
-                        ", ".join(map(str, metadata.player_recommended)),
-                        metadata.complexity
-                    )
 
                     subselected = True
                     while subselected is True:
                         ssidx = TerminalMenu(
                             V_WishlistUpdate,
                             menu_highlight_style=("bg_cyan", "fg_black"),
-                            title=[s for s in [f"{selected.game.name} - {metadata_str}", (selected.wishlist.comment or "")] if s],
+                            title=[s for s in [f"{selected.game.name} - {metadata.format_metadata()}", (selected.wishlist.comment or "")] if s],
                         ).show()
                         
                         subselected = L_WishlistUpdate[ssidx] if isinstance(ssidx, int) else None

@@ -26,6 +26,15 @@ class Game:
 
     def __repr__(self): 
         return self.__str__()
+    
+    def format_metadata(metadata) -> str:
+        return "[Plays: {}–{}][Best: {}][Rec: {}][Cx: {}]".format(
+            metadata.player_minimum,
+            metadata.player_maximum,
+            ", ".join(map(str, metadata.player_best)),
+            ", ".join(map(str, metadata.player_recommended)),
+            metadata.complexity
+        )
 
 class WishlistMetadata:
     priority: int
