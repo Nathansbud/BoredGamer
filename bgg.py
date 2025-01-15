@@ -158,7 +158,7 @@ if __name__ == '__main__':
                             print(f"{colr('Plays added', Role.SUCCESS)}!" if plays > 1 else 'Play added!')
                         else:
                             if res == 401:
-                                print(f"{colr('Incorrect credentials', Role.ERROR)} for currently logged in account'. Try logging in with {yellow('bgg -l')}!")
+                                print(f"{colr('Incorrect credentials', Role.ERROR)} for currently logged in account'. Try logging in with {colr('bgg -l', Role.COMMAND)}!")
                             else:
                                 print(f"{colr('Play add failed', Role.ERROR)} for unknown reasons!")
                             
@@ -201,7 +201,7 @@ if __name__ == '__main__':
                 summary_set = [gd for gd in sorted(game_data.items(), key=game_sorter) if filter_on.lower() in gd[0].lower()]
             
                 if not summary_set: 
-                    print(f"{colr('No games found', Role.ERROR)} matching filter condition: '{yellow(filter_on)}'!")
+                    print(f"{colr('No games found', Role.ERROR)} matching filter condition: '{colr(filter_on, Role.COMMAND)}'!")
                 else: 
                     for game, plays in summary_set:
                         print(f"- {colr(game, Role.GAME)}: {colr(plays, Role.PLAY)}")
@@ -271,6 +271,13 @@ if __name__ == '__main__':
                             
                             selected.comment = output
                             link.update_comment(selected.id, selected.game.id, output)
+                            link.update_status(
+                                selected.id, 
+                                selected.game.id, 
+                                owned=True,
+                                trade=(subselected == CollectionUpdate.MARK_GIVEAWAY)
+                            )
+                                                        
                         elif subselected is CollectionUpdate.MARK_GIVEAWAY:
                             output = tags.modify_tags(
                                 selected, 

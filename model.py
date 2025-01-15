@@ -48,6 +48,7 @@ class CollectionItem:
     game: Game
     id: int
     owned: bool
+    giveaway: Optional[bool]
     comment: Optional[str]
     wishlist: Optional[WishlistMetadata]
 
@@ -57,7 +58,8 @@ class CollectionItem:
             "game",
             "comment",
             "owned",
-            "wishlist"
+            "wishlist",
+            "giveaway"
         ]:
             self.__dict__[field] = kwargs.get(field)
     

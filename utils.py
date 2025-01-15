@@ -52,7 +52,9 @@ class Role(Enum):
     PLAY = Colors.CYAN
     SUCCESS = Colors.GREEN
     ERROR = Colors.RED
+    COMMAND = Colors.BLUE
     DEFAULT = Colors.WHITE
+    
 
 def colr(text: str, role: Role):
     return color(text, role.value)

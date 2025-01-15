@@ -38,12 +38,12 @@ def get_user():
 
 def login():
     os.makedirs(os.path.join(os.path.dirname(__file__), "credentials"), exist_ok=True)
-    username = input(f"Enter your BoardGameGeek {CYAN}username{DEFAULT}: ")
-    password = getpass(f"Enter your BoardGameGeek {GREEN}password{DEFAULT}: ")
+    username = input(f"Enter your BoardGameGeek {colr('username', Role.USER)}: ")
+    password = getpass(f"Enter your BoardGameGeek {bold('password')}: ")
     with open(creds_path, 'w') as cf:
         creds = {"username": username, "password": password}
         json.dump(creds, cf)
-        print(f"Saved login information for user {CYAN}{username}{DEFAULT}; if this is {RED}incorrect{DEFAULT}, run {YELLOW}bgg -l{DEFAULT} to login again!")
+        print(f"Saved login information for user {colr(username, Role.USER)}; if this is {red('incorrect')}, run {colr('bgg -l', Role.COMMAND)} to login again!")
         return creds     
         
 def get_games(name):
@@ -67,7 +67,7 @@ def get_plays(days=30):
     user = get_user()
     while (response := requests.get(f"{bgg_api}/plays?username={user.get('username')}&played=1&page={(i := i+1)}{f'&mindate={date_offset}' if days > 0 else ''}")):
         if "invalid object or user" in response.text.lower():
-            print(f"{RED}Could not find any plays for user {user.get('username')}{DEFAULT}. Try logging in with {YELLOW}bgg -l{DEFAULT}!")
+            print(f"{colr('Could not find any plays', Role.ERROR)} for user {colr(user.get('username'), Role.USER)}. Try logging in with {colr('bgg -l', Role.COMMAND)}!")
             exit(1)
 
         data = xmltodict.parse(response.content)
@@ -193,9 +193,11 @@ def update_status(
     gid: int,
     owned: bool,
     prev_owned: bool = False,
+    trade: Optional[bool] = None,
     wishlist_priority: Optional[int] = None, 
     BGG_SESSION: Optional[requests.Session] = None
 ):
+    
     request_body = {
         "fieldname": "status",
         "collid": cid,
@@ -203,6 +205,7 @@ def update_status(
         "objectid": gid,
         "own": 1 if owned else 0,
         "prev_owned": 1 if prev_owned else 0,
+        "fortrade": 1 if trade else 0,
         "wishlist": 1 if wishlist_priority is not None else 0,
         "wishlistpriority": wishlist_priority if wishlist_priority is not None else 1,
         "ajax": 1,
